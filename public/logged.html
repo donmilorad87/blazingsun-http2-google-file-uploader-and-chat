@@ -1,0 +1,199 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <link rel="icon" href="data:;base64,iVBORwOKGO=" />
+  
+  <link href="style.css" rel="stylesheet" type="text/css" />
+  <link href="logged.css" rel="stylesheet" type="text/css" />
+
+  <script src="script.js" ></script>
+
+  <script src="jquery-3.5.1.min.js"></script>
+
+  <script>
+
+
+$(document).ready(function(){
+    
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const redirect_uri = "https://local.blazingsun.space:4000/logged"; 
+    const client_secret = "aB5XmllNqK9vf9kYddgtAk1M"; 
+    const scope = "https://www.googleapis.com/auth/drive";
+    var access_token= "";
+    var client_id = "916805399736-4ednopukec6t5cql6s2r7bhqbasdgl97.apps.googleusercontent.com";
+    
+
+    $.ajax({
+        type: 'POST',
+        url: "https://www.googleapis.com/oauth2/v4/token",
+        data: {
+            code:code,
+            redirect_uri:redirect_uri,
+            client_secret:client_secret,
+            client_id:client_id,
+            scope:scope,
+            grant_type:"authorization_code"
+        },
+        dataType: "json",
+        success: function(resultData) {
+            
+           localStorage.setItem("accessToken",resultData.access_token);
+           localStorage.setItem("refreshToken",resultData.refreshToken);
+           localStorage.setItem("expires_in",resultData.expires_in);
+           window.history.pushState({}, document.title, "/logged");
+           
+           
+           
+           
+        }
+  });
+
+    function stripQueryStringAndHashFromPath(url) {
+        return url.split("?")[0].split("#")[0];
+    }   
+
+    var Upload = function (file) {
+        this.file = file;
+    };
+    
+    Upload.prototype.getType = function() {
+        localStorage.setItem("type",this.file.type);
+        return this.file.type;
+    };
+    Upload.prototype.getSize = function() {
+        localStorage.setItem("size",this.file.size);
+        return this.file.size;
+    };
+    Upload.prototype.getName = function() {
+        return this.file.name;
+    };
+    Upload.prototype.doUpload = function () {
+        var that = this;
+        var formData = new FormData();
+    
+        // add assoc key values, this will be posts values
+        formData.append("file", this.file, this.getName());
+        formData.append("upload_file", true);
+    
+        $.ajax({
+            type: "POST",
+            beforeSend: function(request) {
+                request.setRequestHeader("Authorization", "Bearer" + " " + localStorage.getItem("accessToken"));
+                
+            },
+            url: "https://www.googleapis.com/upload/drive/v2/files",
+            data:{
+                uploadType:"media"
+            },
+            xhr: function () {
+                var myXhr = $.ajaxSettings.xhr();
+                if (myXhr.upload) {
+                    myXhr.upload.addEventListener('progress', that.progressHandling, false);
+                }
+                return myXhr;
+            },
+            success: function (data) {
+                console.log(data);
+            },
+            error: function (error) {
+                console.log(error);
+            },
+            async: true,
+            data: formData,
+            cache: false,
+            contentType: false,
+            processData: false,
+            timeout: 60000
+        });
+    };
+    
+    Upload.prototype.progressHandling = function (event) {
+        var percent = 0;
+        var position = event.loaded || event.position;
+        var total = event.total;
+        var progress_bar_id = "#progress-wrp";
+        if (event.lengthComputable) {
+            percent = Math.ceil(position / total * 100);
+        }
+        // update progressbars classes so it fits your code
+        $(progress_bar_id + " .progress-bar").css("width", +percent + "%");
+        $(progress_bar_id + " .status").text(percent + "%");
+    };
+
+    $("#upload").on("click", function (e) {
+        var file = $("#files")[0].files[0];
+        var upload = new Upload(file);
+    
+        // maby check size or type here with upload.getSize() and upload.getType()
+    
+        // execute upload
+        upload.doUpload();
+    });
+
+
+
+    
+});
+
+
+  </script>
+
+  
+</head>
+<body>
+
+  <header>
+
+      
+  </header>
+  <nav>
+
+  </nav>
+  <main>
+      
+    <div>
+      <input id="files" type="file" name="files[]" multiple/>
+      <button id="upload">Upload</button>
+      <div id="progress-wrp">
+         <div class="progress-bar"></div>
+         <div class="status">0%</div>
+     </div>
+    </div> 
+    <div id="result">
+        
+    </div>
+
+  </main>
+  <aside>
+    <h1>HTTP2 Chat</h1>
+    <h4>Username:</h4>
+    <div id="userName"></div>
+    <br/>
+    <button onClick="enterChat()">Enter chat</button>
+    <button onClick="quitChat()">Quit chat</button>
+    <br/>
+    <br/>
+    <h4>Users:</h4>
+    <div id="userList"></div>
+    <br/>
+    <h4>Chat:</h4>
+    <div id="chat"></div>
+    <br/>
+    <h4>Message:</h4>
+    <input type="text" id="msg" value="">
+    <button onClick="sendMsg()">Send message</button>
+    <br/>
+    <br/>
+  </aside>
+  <footer>
+      <div class="insajder">Blazing Sun 2020. Sva prava zadržana.</div>
+  </footer>
+
+
+
+  
+</body>
+</html>
